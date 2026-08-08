@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Multiplayer Bingo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>🎱 Bingo</h1>
+    </header>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Join / Create View -->
+    <section id="view-join" class="view">
+      <div class="card-panel">
+        <label for="name-input">Your name</label>
+        <input id="name-input" type="text" maxlength="20" placeholder="Enter your name" autocomplete="off" />
+
+        <button id="create-room-btn" class="btn btn-primary">Create New Room</button>
+
+        <div class="divider">or</div>
+
+        <label for="room-code-input">Room code</label>
+        <input id="room-code-input" type="text" maxlength="4" placeholder="ABCD" autocomplete="off" class="room-code-input" />
+        <button id="join-room-btn" class="btn btn-secondary">Join Room</button>
+      </div>
+    </section>
+
+    <!-- Lobby View -->
+    <section id="view-lobby" class="view hidden">
+      <div class="card-panel">
+        <p>Room code</p>
+        <div id="room-code-display" class="room-code-display"></div>
+        <p class="hint">Share this code with friends so they can join on their phones.</p>
+
+        <h3>Players</h3>
+        <ul id="player-list" class="player-list"></ul>
+
+        <button id="start-game-btn" class="btn btn-primary hidden">Start Game</button>
+        <p id="lobby-wait-msg" class="hint">Waiting for the host to start the game…</p>
+      </div>
+    </section>
+
+    <!-- Game View -->
+    <section id="view-game" class="view hidden">
+      <div id="turn-banner" class="turn-banner"></div>
+
+      <div id="last-ball" class="last-ball hidden"></div>
+
+      <div id="bingo-card" class="bingo-card">
+        <div class="bingo-headers">
+          <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
+        </div>
+        <div id="bingo-grid" class="bingo-grid"></div>
+      </div>
+
+      <button id="draw-ball-btn" class="btn btn-primary">Draw Ball</button>
+      <button id="claim-bingo-btn" class="btn btn-secondary">Claim Bingo!</button>
+
+      <div class="called-history">
+        <h3>Called Balls</h3>
+        <div id="called-list" class="called-list"></div>
+      </div>
+    </section>
+
+    <!-- Game Over View -->
+    <section id="view-gameover" class="view hidden">
+      <div class="card-panel center">
+        <h2>🎉 Bingo!</h2>
+        <p id="winner-text"></p>
+        <button id="play-again-btn" class="btn btn-primary">Back to Home</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
