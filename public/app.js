@@ -10,7 +10,6 @@ const views = {
   join: document.getElementById('view-join'),
   lobby: document.getElementById('view-lobby'),
   game: document.getElementById('view-game'),
-  gameover: document.getElementById('view-gameover'),
 };
 
 function showView(name) {
@@ -58,13 +57,14 @@ document.getElementById('auto-draw-toggle').addEventListener('change', (e) => {
 });
 
 document.getElementById('auto-draw-interval').addEventListener('input', (e) => {
-  document.getElementById('auto-draw-interval-value').textContent = e.target.value;
+  document.getElementById('auto-draw-interval-value').textContent = parseFloat(e.target.value).toFixed(1);
 });
 
 document.getElementById('start-game-btn').addEventListener('click', () => {
   const autoDraw = document.getElementById('auto-draw-toggle').checked;
-  const autoDrawIntervalMs = Number(document.getElementById('auto-draw-interval').value) * 1000;
-  socket.emit('startGame', { roomCode: currentRoomCode, autoDraw, autoDrawIntervalMs });
+  const autoDrawIntervalMs = Math.round(Number(document.getElementById('auto-draw-interval').value) * 1000);
+  const blackout = document.getElementById('blackout-toggle').checked;
+  socket.emit('startGame', { roomCode: currentRoomCode, autoDraw, autoDrawIntervalMs, blackout });
 });
 
 // ----- Game -----
@@ -85,7 +85,12 @@ document.getElementById('pause-auto-draw-btn').addEventListener('click', () => {
   }
 });
 
-document.getElementById('play-again-btn').addEventListener('click', () => {
+document.getElementById('restart-game-btn').addEventListener('click', () => {
+  socket.emit('restartGame', { roomCode: currentRoomCode });
+  document.getElementById('splash-overlay').classList.add('hidden');
+});
+
+document.getElementById('home-btn').addEventListener('click', () => {
   window.location.reload();
 });
 
@@ -112,14 +117,16 @@ socket.on('roomUpdate', (roomState) => {
   latestRoomState = roomState;
   currentRoomCode = roomState.code;
 
+  if (roomState.status !== 'finished') {
+    document.getElementById('splash-overlay').classList.add('hidden');
+  }
+
   if (roomState.status === 'lobby') {
     renderLobby(roomState);
     showView('lobby');
-  } else if (roomState.status === 'playing') {
+  } else if (roomState.status === 'playing' || roomState.status === 'finished') {
     renderGame(roomState);
     showView('game');
-  } else if (roomState.status === 'finished') {
-    showView('gameover');
   }
 });
 
@@ -129,9 +136,12 @@ socket.on('ballDrawn', ({ number, letter }) => {
   lastBall.classList.remove('hidden');
 });
 
-socket.on('gameOver', ({ winnerName }) => {
-  document.getElementById('winner-text').textContent = `${winnerName} won the game!`;
-  showView('gameover');
+socket.on('gameOver', ({ winnerName, blackout }) => {
+  document.getElementById('splash-title').textContent = blackout ? '⬛ BLACKOUT!' : '🎉 Bingo!';
+  document.getElementById('winner-text').textContent = blackout
+    ? `${winnerName} covered the whole card!`
+    : `${winnerName} won the game!`;
+  document.getElementById('splash-overlay').classList.remove('hidden');
 });
 
 // ----- Rendering -----
@@ -161,11 +171,13 @@ function renderLobby(roomState) {
   const autoDrawLabel = document.getElementById('auto-draw-label');
   const autoDrawToggle = document.getElementById('auto-draw-toggle');
   const intervalRow = document.getElementById('auto-draw-interval-row');
+  const blackoutLabel = document.getElementById('blackout-label');
   if (isHost) {
     startBtn.classList.remove('hidden');
     waitMsg.classList.add('hidden');
     autoDrawLabel.classList.remove('hidden');
     intervalRow.classList.toggle('hidden', !autoDrawToggle.checked);
+    blackoutLabel.classList.remove('hidden');
     startBtn.disabled = false;
     startBtn.textContent = roomState.players.length < 2
       ? 'Start Solo Game'
@@ -175,6 +187,7 @@ function renderLobby(roomState) {
     waitMsg.classList.remove('hidden');
     autoDrawLabel.classList.add('hidden');
     intervalRow.classList.add('hidden');
+    blackoutLabel.classList.add('hidden');
   }
 }
 
@@ -183,14 +196,29 @@ function renderGame(roomState) {
   const autoDrawBanner = document.getElementById('auto-draw-banner');
   const drawBtn = document.getElementById('draw-ball-btn');
   const pauseBtn = document.getElementById('pause-auto-draw-btn');
+  const claimBtn = document.getElementById('claim-bingo-btn');
   const isHost = roomState.hostId === myId;
+
+  claimBtn.textContent = roomState.blackout ? 'Claim Blackout!' : 'Claim Bingo!';
+
+  if (roomState.status === 'finished') {
+    banner.classList.add('hidden');
+    autoDrawBanner.classList.add('hidden');
+    pauseBtn.classList.add('hidden');
+    drawBtn.classList.add('hidden');
+    claimBtn.classList.add('hidden');
+    renderCalledList(roomState);
+    renderCard();
+    return;
+  }
+  claimBtn.classList.remove('hidden');
 
   if (roomState.autoDraw) {
     banner.classList.add('hidden');
     autoDrawBanner.classList.remove('hidden');
     drawBtn.classList.add('hidden');
 
-    const seconds = Math.round((roomState.autoDrawIntervalMs || 5000) / 1000);
+    const seconds = ((roomState.autoDrawIntervalMs || 5000) / 1000).toFixed(1);
     autoDrawBanner.textContent = roomState.autoDrawPaused
       ? '⏸ Auto-draw paused'
       : `🎲 Drawing a ball every ${seconds}s…`;
@@ -219,6 +247,11 @@ function renderGame(roomState) {
     drawBtn.disabled = !isMyTurn;
   }
 
+  renderCalledList(roomState);
+  renderCard();
+}
+
+function renderCalledList(roomState) {
   const calledList = document.getElementById('called-list');
   calledList.innerHTML = '';
   roomState.drawnBalls.forEach((n) => {
@@ -227,8 +260,6 @@ function renderGame(roomState) {
     el.textContent = n;
     calledList.appendChild(el);
   });
-
-  renderCard();
 }
 
 function renderCard() {

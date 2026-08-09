@@ -1,16 +1,16 @@
-const { generateCard, createBallPool } = require('./card');
+const { generateCard, createBallPool, checkWin, checkBlackout } = require('./card');
 
 const rooms = new Map();
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const EMPTY_ROOM_GRACE_MS = 60_000;
-const MIN_AUTO_DRAW_INTERVAL_MS = 1000;
+const MIN_AUTO_DRAW_INTERVAL_MS = 100;
 const MAX_AUTO_DRAW_INTERVAL_MS = 10_000;
 const DEFAULT_AUTO_DRAW_INTERVAL_MS = 5000;
 
 function clampAutoDrawInterval(ms) {
   const value = Number(ms);
   if (!Number.isFinite(value)) return DEFAULT_AUTO_DRAW_INTERVAL_MS;
-  return Math.min(MAX_AUTO_DRAW_INTERVAL_MS, Math.max(MIN_AUTO_DRAW_INTERVAL_MS, value));
+  return Math.round(Math.min(MAX_AUTO_DRAW_INTERVAL_MS, Math.max(MIN_AUTO_DRAW_INTERVAL_MS, value)));
 }
 
 function generateRoomCode() {
@@ -41,6 +41,7 @@ function createRoom(hostId, hostName) {
     autoDraw: false,
     autoDrawIntervalMs: DEFAULT_AUTO_DRAW_INTERVAL_MS,
     autoDrawPaused: false,
+    blackout: false,
   };
   rooms.set(code, room);
   return room;
@@ -80,6 +81,30 @@ function startGame(code, requesterId, options = {}) {
     ? clampAutoDrawInterval(options.autoDrawIntervalMs)
     : DEFAULT_AUTO_DRAW_INTERVAL_MS;
   room.autoDrawPaused = false;
+  room.blackout = !!options.blackout;
+  return { room };
+}
+
+function restartGame(code, requesterId) {
+  const room = getRoom(code);
+  if (!room) return { error: 'Room not found' };
+  if (room.hostId !== requesterId) return { error: 'Only the host can restart the game' };
+
+  for (const player of room.players) {
+    const { card, marked } = generateCard();
+    player.card = card;
+    player.marked = marked;
+  }
+
+  room.turnOrder = room.players.map((p) => p.id);
+  room.currentTurnIndex = 0;
+  room.drawnBalls = [];
+  room.remainingBalls = [];
+  room.status = 'lobby';
+  room.winnerId = null;
+  room.autoDraw = false;
+  room.autoDrawPaused = false;
+  room.blackout = false;
   return { room };
 }
 
@@ -153,17 +178,20 @@ function advanceTurn(room) {
 }
 
 function claimBingo(code, requesterId) {
-  const { checkWin } = require('./card');
   const room = getRoom(code);
   if (!room) return { error: 'Room not found' };
   if (room.status !== 'playing') return { error: 'Game is not in progress' };
   const player = room.players.find((p) => p.id === requesterId);
   if (!player) return { error: 'Player not in room' };
-  if (!checkWin(player.marked)) return { error: 'Not a valid bingo yet' };
+
+  const won = room.blackout ? checkBlackout(player.marked) : checkWin(player.marked);
+  if (!won) {
+    return { error: room.blackout ? 'Not a blackout yet' : 'Not a valid bingo yet' };
+  }
 
   room.status = 'finished';
   room.winnerId = requesterId;
-  return { room, winnerName: player.name };
+  return { room, winnerName: player.name, blackout: room.blackout };
 }
 
 function removePlayer(socketId) {
@@ -212,6 +240,7 @@ module.exports = {
   getRoom,
   joinRoom,
   startGame,
+  restartGame,
   drawBall,
   forceDrawBall,
   setAutoDrawPaused,
