@@ -103,6 +103,14 @@ document.getElementById('close-splash-btn').addEventListener('click', () => {
   document.getElementById('splash-overlay').classList.add('hidden');
 });
 
+document.getElementById('board-continue-blackout-btn').addEventListener('click', () => {
+  socket.emit('continueToBlackout', { roomCode: currentRoomCode });
+});
+
+document.getElementById('board-home-btn').addEventListener('click', () => {
+  window.location.reload();
+});
+
 // ----- Socket events -----
 
 const UNRECOVERABLE_ERRORS = ['Room not found', 'Player not in room'];
@@ -222,17 +230,23 @@ function renderGame(roomState) {
 
   claimBtn.textContent = roomState.blackout ? 'Claim Blackout!' : 'Claim Bingo!';
 
+  const postGameActions = document.getElementById('post-game-actions');
+  const boardContinueBtn = document.getElementById('board-continue-blackout-btn');
+
   if (roomState.status === 'finished') {
     banner.classList.add('hidden');
     autoDrawBanner.classList.add('hidden');
     pauseBtn.classList.add('hidden');
     drawBtn.classList.add('hidden');
     claimBtn.classList.add('hidden');
+    postGameActions.classList.remove('hidden');
+    boardContinueBtn.classList.toggle('hidden', roomState.blackout || !isHost);
     renderCalledList(roomState);
     renderCard();
     return;
   }
   claimBtn.classList.remove('hidden');
+  postGameActions.classList.add('hidden');
 
   if (roomState.autoDraw) {
     banner.classList.add('hidden');
