@@ -99,6 +99,10 @@ document.getElementById('home-btn').addEventListener('click', () => {
   window.location.reload();
 });
 
+document.getElementById('close-splash-btn').addEventListener('click', () => {
+  document.getElementById('splash-overlay').classList.add('hidden');
+});
+
 // ----- Socket events -----
 
 const UNRECOVERABLE_ERRORS = ['Room not found', 'Player not in room'];
