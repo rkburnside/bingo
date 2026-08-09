@@ -47,8 +47,13 @@
 
         <label id="auto-draw-label" class="checkbox-row hidden">
           <input type="checkbox" id="auto-draw-toggle" />
-          Auto-draw balls every 5 seconds
+          Auto-draw balls
         </label>
+
+        <div id="auto-draw-interval-row" class="interval-row hidden">
+          <label for="auto-draw-interval">Every <span id="auto-draw-interval-value">5</span>s</label>
+          <input type="range" id="auto-draw-interval" min="1" max="10" step="1" value="5" />
+        </div>
 
         <button id="start-game-btn" class="btn btn-primary hidden">Start Game</button>
         <p id="lobby-wait-msg" class="hint">Waiting for the host to start the game…</p>
@@ -58,7 +63,8 @@
     <!-- Game View -->
     <section id="view-game" class="view hidden">
       <div id="turn-banner" class="turn-banner"></div>
-      <div id="auto-draw-banner" class="turn-banner hidden">🎲 Balls are drawing automatically…</div>
+      <div id="auto-draw-banner" class="turn-banner hidden"></div>
+      <button id="pause-auto-draw-btn" class="btn btn-secondary hidden">Pause</button>
 
       <div id="last-ball" class="last-ball hidden"></div>
 
