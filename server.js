@@ -27,6 +27,7 @@ function publicRoomState(room) {
     autoDraw: room.autoDraw,
     autoDrawIntervalMs: room.autoDrawIntervalMs,
     autoDrawPaused: room.autoDrawPaused,
+    blackout: room.blackout,
   };
 }
 
@@ -112,8 +113,8 @@ io.on('connection', (socket) => {
     broadcastRoom(room);
   });
 
-  socket.on('startGame', ({ roomCode, autoDraw, autoDrawIntervalMs }) => {
-    const { room, error } = rooms.startGame(roomCode, socket.id, { autoDraw, autoDrawIntervalMs });
+  socket.on('startGame', ({ roomCode, autoDraw, autoDrawIntervalMs, blackout }) => {
+    const { room, error } = rooms.startGame(roomCode, socket.id, { autoDraw, autoDrawIntervalMs, blackout });
     if (error) {
       socket.emit('errorMessage', error);
       return;
@@ -127,6 +128,20 @@ io.on('connection', (socket) => {
     if (room.autoDraw) {
       startAutoDraw(room.code);
     }
+  });
+
+  socket.on('restartGame', ({ roomCode }) => {
+    const { room, error } = rooms.restartGame(roomCode, socket.id);
+    if (error) {
+      socket.emit('errorMessage', error);
+      return;
+    }
+    stopAutoDraw(roomCode);
+    for (const player of room.players) {
+      const playerSocket = io.sockets.sockets.get(player.id);
+      if (playerSocket) sendPrivateCard(playerSocket, room, player.id);
+    }
+    broadcastRoom(room);
   });
 
   socket.on('pauseAutoDraw', ({ roomCode }) => {
@@ -159,13 +174,13 @@ io.on('connection', (socket) => {
   });
 
   socket.on('claimBingo', ({ roomCode }) => {
-    const { room, winnerName, error } = rooms.claimBingo(roomCode, socket.id);
+    const { room, winnerName, blackout, error } = rooms.claimBingo(roomCode, socket.id);
     if (error) {
       socket.emit('errorMessage', error);
       return;
     }
     stopAutoDraw(roomCode);
-    io.to(room.code).emit('gameOver', { winnerId: socket.id, winnerName });
+    io.to(room.code).emit('gameOver', { winnerId: socket.id, winnerName, blackout });
     broadcastRoom(room);
   });
 

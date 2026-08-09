@@ -57,10 +57,14 @@ function checkWin(marked) {
   return false;
 }
 
+function checkBlackout(marked) {
+  return marked.every((row) => row.every(Boolean));
+}
+
 function createBallPool() {
   const balls = [];
   for (let n = 1; n <= 75; n++) balls.push(n);
   return shuffle(balls);
 }
 
-module.exports = { generateCard, checkWin, createBallPool, letterForNumber };
+module.exports = { generateCard, checkWin, checkBlackout, createBallPool, letterForNumber };

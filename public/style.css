@@ -292,3 +292,37 @@ input {
   max-width: 90%;
   text-align: center;
 }
+
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 200;
+}
+
+.splash-panel {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 32px 24px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.splash-panel h2 {
+  font-size: 2.2rem;
+  margin: 0 0 4px;
+}
+
+.splash-panel p {
+  color: #cbd5e1;
+  margin: 0 0 8px;
+}
