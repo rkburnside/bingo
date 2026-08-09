@@ -144,6 +144,18 @@ io.on('connection', (socket) => {
     broadcastRoom(room);
   });
 
+  socket.on('continueToBlackout', ({ roomCode }) => {
+    const { room, error } = rooms.continueToBlackout(roomCode, socket.id);
+    if (error) {
+      socket.emit('errorMessage', error);
+      return;
+    }
+    broadcastRoom(room);
+    if (room.autoDraw) {
+      startAutoDraw(room.code);
+    }
+  });
+
   socket.on('pauseAutoDraw', ({ roomCode }) => {
     const { room, error } = rooms.setAutoDrawPaused(roomCode, socket.id, true);
     if (error) {

@@ -4,7 +4,7 @@ const rooms = new Map();
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const EMPTY_ROOM_GRACE_MS = 60_000;
 const MIN_AUTO_DRAW_INTERVAL_MS = 100;
-const MAX_AUTO_DRAW_INTERVAL_MS = 10_000;
+const MAX_AUTO_DRAW_INTERVAL_MS = 5000;
 const DEFAULT_AUTO_DRAW_INTERVAL_MS = 5000;
 
 function clampAutoDrawInterval(ms) {
@@ -105,6 +105,19 @@ function restartGame(code, requesterId) {
   room.autoDraw = false;
   room.autoDrawPaused = false;
   room.blackout = false;
+  return { room };
+}
+
+function continueToBlackout(code, requesterId) {
+  const room = getRoom(code);
+  if (!room) return { error: 'Room not found' };
+  if (room.hostId !== requesterId) return { error: 'Only the host can continue the game' };
+  if (room.status !== 'finished') return { error: 'Game is not finished' };
+  if (room.blackout) return { error: 'This game was already a blackout' };
+
+  room.status = 'playing';
+  room.blackout = true;
+  room.winnerId = null;
   return { room };
 }
 
@@ -241,6 +254,7 @@ module.exports = {
   joinRoom,
   startGame,
   restartGame,
+  continueToBlackout,
   drawBall,
   forceDrawBall,
   setAutoDrawPaused,

@@ -90,6 +90,11 @@ document.getElementById('restart-game-btn').addEventListener('click', () => {
   document.getElementById('splash-overlay').classList.add('hidden');
 });
 
+document.getElementById('continue-blackout-btn').addEventListener('click', () => {
+  socket.emit('continueToBlackout', { roomCode: currentRoomCode });
+  document.getElementById('splash-overlay').classList.add('hidden');
+});
+
 document.getElementById('home-btn').addEventListener('click', () => {
   window.location.reload();
 });
@@ -148,6 +153,11 @@ socket.on('gameOver', ({ winnerName, blackout }) => {
   document.getElementById('winner-text').textContent = blackout
     ? `${winnerName} covered the whole card!`
     : `${winnerName} won the game!`;
+
+  const continueBtn = document.getElementById('continue-blackout-btn');
+  const isHost = latestRoomState && latestRoomState.hostId === myId;
+  continueBtn.classList.toggle('hidden', blackout || !isHost);
+
   document.getElementById('splash-overlay').classList.remove('hidden');
 });
 
