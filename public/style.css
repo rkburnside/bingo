@@ -98,10 +98,21 @@ input {
   color: #fff;
 }
 
+.section-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  margin: 20px 0 0;
+  width: 100%;
+}
+
+#create-room-btn {
+  margin-top: 24px;
+}
+
 .divider {
   text-align: center;
   color: #94a3b8;
-  margin: 22px 0 18px;
+  margin: 8px 0 6px;
 }
 
 .room-code-display {
