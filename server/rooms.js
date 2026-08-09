@@ -29,6 +29,7 @@ function createRoom(hostId, hostName) {
     status: 'lobby',
     winnerId: null,
     emptyTimer: null,
+    autoDraw: false,
   };
   rooms.set(code, room);
   return room;
@@ -51,11 +52,11 @@ function joinRoom(code, playerId, name) {
   return { room };
 }
 
-function startGame(code, requesterId) {
+function startGame(code, requesterId, options = {}) {
   const room = getRoom(code);
   if (!room) return { error: 'Room not found' };
   if (room.hostId !== requesterId) return { error: 'Only the host can start the game' };
-  if (room.players.length < 2) return { error: 'Need at least 2 players to start' };
+  if (room.players.length < 1) return { error: 'Need at least 1 player to start' };
 
   room.turnOrder = shuffle(room.players.map((p) => p.id));
   room.currentTurnIndex = 0;
@@ -63,6 +64,7 @@ function startGame(code, requesterId) {
   room.remainingBalls = createBallPool();
   room.status = 'playing';
   room.winnerId = null;
+  room.autoDraw = !!options.autoDraw;
   return { room };
 }
 
@@ -79,13 +81,7 @@ function currentTurnPlayerId(room) {
   return room.turnOrder[room.currentTurnIndex];
 }
 
-function drawBall(code, requesterId) {
-  const room = getRoom(code);
-  if (!room) return { error: 'Room not found' };
-  if (room.status !== 'playing') return { error: 'Game is not in progress' };
-  if (currentTurnPlayerId(room) !== requesterId) return { error: 'Not your turn' };
-  if (room.remainingBalls.length === 0) return { error: 'No balls left' };
-
+function performDraw(room) {
   const number = room.remainingBalls.pop();
   room.drawnBalls.push(number);
 
@@ -100,6 +96,28 @@ function drawBall(code, requesterId) {
   }
 
   advanceTurn(room);
+  return number;
+}
+
+function drawBall(code, requesterId) {
+  const room = getRoom(code);
+  if (!room) return { error: 'Room not found' };
+  if (room.status !== 'playing') return { error: 'Game is not in progress' };
+  if (room.autoDraw) return { error: 'Balls are being drawn automatically' };
+  if (currentTurnPlayerId(room) !== requesterId) return { error: 'Not your turn' };
+  if (room.remainingBalls.length === 0) return { error: 'No balls left' };
+
+  const number = performDraw(room);
+  return { room, number };
+}
+
+function forceDrawBall(code) {
+  const room = getRoom(code);
+  if (!room) return { error: 'Room not found' };
+  if (room.status !== 'playing') return { error: 'Game is not in progress' };
+  if (room.remainingBalls.length === 0) return { error: 'No balls left' };
+
+  const number = performDraw(room);
   return { room, number };
 }
 
@@ -169,6 +187,7 @@ module.exports = {
   joinRoom,
   startGame,
   drawBall,
+  forceDrawBall,
   claimBingo,
   removePlayer,
   currentTurnPlayerId,
