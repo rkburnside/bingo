@@ -96,7 +96,14 @@ document.getElementById('home-btn').addEventListener('click', () => {
 
 // ----- Socket events -----
 
+const UNRECOVERABLE_ERRORS = ['Room not found', 'Player not in room'];
+
 socket.on('errorMessage', (message) => {
+  if (UNRECOVERABLE_ERRORS.includes(message)) {
+    showToast('This game session no longer exists — returning to the home screen…');
+    setTimeout(() => window.location.reload(), 2500);
+    return;
+  }
   showToast(message);
 });
 
