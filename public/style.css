@@ -266,6 +266,13 @@ input {
   color: #1e1b4b;
 }
 
+.post-game-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .called-history {
   margin-top: 16px;
 }
