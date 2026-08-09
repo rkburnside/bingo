@@ -118,6 +118,37 @@ input {
   text-align: center;
 }
 
+.qr-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.qr-wrapper img {
+  width: 160px;
+  height: 160px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  color: #f8fafc;
+  padding: 10px 4px;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .player-list {
   list-style: none;
   padding: 0;

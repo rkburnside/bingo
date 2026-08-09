@@ -29,6 +29,12 @@ socket.on('connect', () => {
   myId = socket.id;
 });
 
+// Pre-fill the room code from a shared/QR join link, e.g. ?room=ABCD
+const prefillRoomCode = new URLSearchParams(window.location.search).get('room');
+if (prefillRoomCode) {
+  document.getElementById('room-code-input').value = prefillRoomCode.toUpperCase();
+}
+
 // ----- Join / Create -----
 
 document.getElementById('create-room-btn').addEventListener('click', () => {
@@ -48,7 +54,8 @@ document.getElementById('join-room-btn').addEventListener('click', () => {
 // ----- Lobby -----
 
 document.getElementById('start-game-btn').addEventListener('click', () => {
-  socket.emit('startGame', { roomCode: currentRoomCode });
+  const autoDraw = document.getElementById('auto-draw-toggle').checked;
+  socket.emit('startGame', { roomCode: currentRoomCode, autoDraw });
 });
 
 // ----- Game -----
@@ -75,6 +82,13 @@ socket.on('cardAssigned', ({ card, marked }) => {
   myCard = card;
   myMarked = marked;
   renderCard();
+});
+
+socket.on('roomCreated', ({ qrCodeDataUrl }) => {
+  const wrapper = document.getElementById('qr-wrapper');
+  const img = document.getElementById('room-qr-code');
+  img.src = qrCodeDataUrl;
+  wrapper.classList.remove('hidden');
 });
 
 socket.on('roomUpdate', (roomState) => {
@@ -127,32 +141,47 @@ function renderLobby(roomState) {
   const isHost = roomState.hostId === myId;
   const startBtn = document.getElementById('start-game-btn');
   const waitMsg = document.getElementById('lobby-wait-msg');
+  const autoDrawLabel = document.getElementById('auto-draw-label');
   if (isHost) {
     startBtn.classList.remove('hidden');
     waitMsg.classList.add('hidden');
-    startBtn.disabled = roomState.players.length < 2;
+    autoDrawLabel.classList.remove('hidden');
+    startBtn.disabled = false;
     startBtn.textContent = roomState.players.length < 2
-      ? 'Need at least 2 players'
+      ? 'Start Solo Game'
       : 'Start Game';
   } else {
     startBtn.classList.add('hidden');
     waitMsg.classList.remove('hidden');
+    autoDrawLabel.classList.add('hidden');
   }
 }
 
 function renderGame(roomState) {
-  const isMyTurn = roomState.currentTurnPlayerId === myId;
   const banner = document.getElementById('turn-banner');
-  if (isMyTurn) {
-    banner.textContent = "It's your turn — draw a ball!";
-    banner.classList.add('my-turn');
-  } else {
-    const player = roomState.players.find((p) => p.id === roomState.currentTurnPlayerId);
-    banner.textContent = player ? `Waiting for ${player.name} to draw...` : 'Waiting...';
-    banner.classList.remove('my-turn');
-  }
+  const autoDrawBanner = document.getElementById('auto-draw-banner');
+  const drawBtn = document.getElementById('draw-ball-btn');
 
-  document.getElementById('draw-ball-btn').disabled = !isMyTurn;
+  if (roomState.autoDraw) {
+    banner.classList.add('hidden');
+    autoDrawBanner.classList.remove('hidden');
+    drawBtn.classList.add('hidden');
+  } else {
+    autoDrawBanner.classList.add('hidden');
+    banner.classList.remove('hidden');
+    drawBtn.classList.remove('hidden');
+
+    const isMyTurn = roomState.currentTurnPlayerId === myId;
+    if (isMyTurn) {
+      banner.textContent = "It's your turn — draw a ball!";
+      banner.classList.add('my-turn');
+    } else {
+      const player = roomState.players.find((p) => p.id === roomState.currentTurnPlayerId);
+      banner.textContent = player ? `Waiting for ${player.name} to draw...` : 'Waiting...';
+      banner.classList.remove('my-turn');
+    }
+    drawBtn.disabled = !isMyTurn;
+  }
 
   const calledList = document.getElementById('called-list');
   calledList.innerHTML = '';

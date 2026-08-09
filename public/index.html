@@ -37,8 +37,18 @@
         <div id="room-code-display" class="room-code-display"></div>
         <p class="hint">Share this code with friends so they can join on their phones.</p>
 
+        <div id="qr-wrapper" class="qr-wrapper hidden">
+          <img id="room-qr-code" alt="QR code to join this room" />
+          <p class="hint">Scan to join</p>
+        </div>
+
         <h3>Players</h3>
         <ul id="player-list" class="player-list"></ul>
+
+        <label id="auto-draw-label" class="checkbox-row hidden">
+          <input type="checkbox" id="auto-draw-toggle" />
+          Auto-draw balls every 5 seconds
+        </label>
 
         <button id="start-game-btn" class="btn btn-primary hidden">Start Game</button>
         <p id="lobby-wait-msg" class="hint">Waiting for the host to start the game…</p>
@@ -48,6 +58,7 @@
     <!-- Game View -->
     <section id="view-game" class="view hidden">
       <div id="turn-banner" class="turn-banner"></div>
+      <div id="auto-draw-banner" class="turn-banner hidden">🎲 Balls are drawing automatically…</div>
 
       <div id="last-ball" class="last-ball hidden"></div>
 
