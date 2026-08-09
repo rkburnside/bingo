@@ -53,9 +53,18 @@ document.getElementById('join-room-btn').addEventListener('click', () => {
 
 // ----- Lobby -----
 
+document.getElementById('auto-draw-toggle').addEventListener('change', (e) => {
+  document.getElementById('auto-draw-interval-row').classList.toggle('hidden', !e.target.checked);
+});
+
+document.getElementById('auto-draw-interval').addEventListener('input', (e) => {
+  document.getElementById('auto-draw-interval-value').textContent = e.target.value;
+});
+
 document.getElementById('start-game-btn').addEventListener('click', () => {
   const autoDraw = document.getElementById('auto-draw-toggle').checked;
-  socket.emit('startGame', { roomCode: currentRoomCode, autoDraw });
+  const autoDrawIntervalMs = Number(document.getElementById('auto-draw-interval').value) * 1000;
+  socket.emit('startGame', { roomCode: currentRoomCode, autoDraw, autoDrawIntervalMs });
 });
 
 // ----- Game -----
@@ -66,6 +75,14 @@ document.getElementById('draw-ball-btn').addEventListener('click', () => {
 
 document.getElementById('claim-bingo-btn').addEventListener('click', () => {
   socket.emit('claimBingo', { roomCode: currentRoomCode });
+});
+
+document.getElementById('pause-auto-draw-btn').addEventListener('click', () => {
+  if (latestRoomState && latestRoomState.autoDrawPaused) {
+    socket.emit('resumeAutoDraw', { roomCode: currentRoomCode });
+  } else {
+    socket.emit('pauseAutoDraw', { roomCode: currentRoomCode });
+  }
 });
 
 document.getElementById('play-again-btn').addEventListener('click', () => {
@@ -142,10 +159,13 @@ function renderLobby(roomState) {
   const startBtn = document.getElementById('start-game-btn');
   const waitMsg = document.getElementById('lobby-wait-msg');
   const autoDrawLabel = document.getElementById('auto-draw-label');
+  const autoDrawToggle = document.getElementById('auto-draw-toggle');
+  const intervalRow = document.getElementById('auto-draw-interval-row');
   if (isHost) {
     startBtn.classList.remove('hidden');
     waitMsg.classList.add('hidden');
     autoDrawLabel.classList.remove('hidden');
+    intervalRow.classList.toggle('hidden', !autoDrawToggle.checked);
     startBtn.disabled = false;
     startBtn.textContent = roomState.players.length < 2
       ? 'Start Solo Game'
@@ -154,6 +174,7 @@ function renderLobby(roomState) {
     startBtn.classList.add('hidden');
     waitMsg.classList.remove('hidden');
     autoDrawLabel.classList.add('hidden');
+    intervalRow.classList.add('hidden');
   }
 }
 
@@ -161,13 +182,28 @@ function renderGame(roomState) {
   const banner = document.getElementById('turn-banner');
   const autoDrawBanner = document.getElementById('auto-draw-banner');
   const drawBtn = document.getElementById('draw-ball-btn');
+  const pauseBtn = document.getElementById('pause-auto-draw-btn');
+  const isHost = roomState.hostId === myId;
 
   if (roomState.autoDraw) {
     banner.classList.add('hidden');
     autoDrawBanner.classList.remove('hidden');
     drawBtn.classList.add('hidden');
+
+    const seconds = Math.round((roomState.autoDrawIntervalMs || 5000) / 1000);
+    autoDrawBanner.textContent = roomState.autoDrawPaused
+      ? '⏸ Auto-draw paused'
+      : `🎲 Drawing a ball every ${seconds}s…`;
+
+    if (isHost) {
+      pauseBtn.classList.remove('hidden');
+      pauseBtn.textContent = roomState.autoDrawPaused ? 'Resume' : 'Pause';
+    } else {
+      pauseBtn.classList.add('hidden');
+    }
   } else {
     autoDrawBanner.classList.add('hidden');
+    pauseBtn.classList.add('hidden');
     banner.classList.remove('hidden');
     drawBtn.classList.remove('hidden');
 

@@ -3,6 +3,15 @@ const { generateCard, createBallPool } = require('./card');
 const rooms = new Map();
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const EMPTY_ROOM_GRACE_MS = 60_000;
+const MIN_AUTO_DRAW_INTERVAL_MS = 1000;
+const MAX_AUTO_DRAW_INTERVAL_MS = 10_000;
+const DEFAULT_AUTO_DRAW_INTERVAL_MS = 5000;
+
+function clampAutoDrawInterval(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value)) return DEFAULT_AUTO_DRAW_INTERVAL_MS;
+  return Math.min(MAX_AUTO_DRAW_INTERVAL_MS, Math.max(MIN_AUTO_DRAW_INTERVAL_MS, value));
+}
 
 function generateRoomCode() {
   let code;
@@ -30,6 +39,8 @@ function createRoom(hostId, hostName) {
     winnerId: null,
     emptyTimer: null,
     autoDraw: false,
+    autoDrawIntervalMs: DEFAULT_AUTO_DRAW_INTERVAL_MS,
+    autoDrawPaused: false,
   };
   rooms.set(code, room);
   return room;
@@ -65,6 +76,21 @@ function startGame(code, requesterId, options = {}) {
   room.status = 'playing';
   room.winnerId = null;
   room.autoDraw = !!options.autoDraw;
+  room.autoDrawIntervalMs = room.autoDraw
+    ? clampAutoDrawInterval(options.autoDrawIntervalMs)
+    : DEFAULT_AUTO_DRAW_INTERVAL_MS;
+  room.autoDrawPaused = false;
+  return { room };
+}
+
+function setAutoDrawPaused(code, requesterId, paused) {
+  const room = getRoom(code);
+  if (!room) return { error: 'Room not found' };
+  if (room.hostId !== requesterId) return { error: 'Only the host can pause or resume' };
+  if (room.status !== 'playing') return { error: 'Game is not in progress' };
+  if (!room.autoDraw) return { error: 'Auto-draw is not enabled for this room' };
+
+  room.autoDrawPaused = !!paused;
   return { room };
 }
 
@@ -188,6 +214,7 @@ module.exports = {
   startGame,
   drawBall,
   forceDrawBall,
+  setAutoDrawPaused,
   claimBingo,
   removePlayer,
   currentTurnPlayerId,

@@ -10,7 +10,6 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer);
 
-const AUTO_DRAW_INTERVAL_MS = 5000;
 const autoDrawTimers = new Map();
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -26,6 +25,8 @@ function publicRoomState(room) {
     drawnBalls: room.drawnBalls,
     winnerId: room.winnerId,
     autoDraw: room.autoDraw,
+    autoDrawIntervalMs: room.autoDrawIntervalMs,
+    autoDrawPaused: room.autoDrawPaused,
   };
 }
 
@@ -62,14 +63,16 @@ function stopAutoDraw(roomCode) {
 
 function startAutoDraw(roomCode) {
   stopAutoDraw(roomCode);
+  const room = rooms.getRoom(roomCode);
+  if (!room) return;
   const timer = setInterval(() => {
-    const { room, number, error } = rooms.forceDrawBall(roomCode);
+    const { room: drawnRoom, number, error } = rooms.forceDrawBall(roomCode);
     if (error) {
       stopAutoDraw(roomCode);
       return;
     }
-    broadcastDraw(room, number);
-  }, AUTO_DRAW_INTERVAL_MS);
+    broadcastDraw(drawnRoom, number);
+  }, room.autoDrawIntervalMs);
   autoDrawTimers.set(roomCode, timer);
 }
 
@@ -109,8 +112,8 @@ io.on('connection', (socket) => {
     broadcastRoom(room);
   });
 
-  socket.on('startGame', ({ roomCode, autoDraw }) => {
-    const { room, error } = rooms.startGame(roomCode, socket.id, { autoDraw });
+  socket.on('startGame', ({ roomCode, autoDraw, autoDrawIntervalMs }) => {
+    const { room, error } = rooms.startGame(roomCode, socket.id, { autoDraw, autoDrawIntervalMs });
     if (error) {
       socket.emit('errorMessage', error);
       return;
@@ -124,6 +127,26 @@ io.on('connection', (socket) => {
     if (room.autoDraw) {
       startAutoDraw(room.code);
     }
+  });
+
+  socket.on('pauseAutoDraw', ({ roomCode }) => {
+    const { room, error } = rooms.setAutoDrawPaused(roomCode, socket.id, true);
+    if (error) {
+      socket.emit('errorMessage', error);
+      return;
+    }
+    stopAutoDraw(roomCode);
+    broadcastRoom(room);
+  });
+
+  socket.on('resumeAutoDraw', ({ roomCode }) => {
+    const { room, error } = rooms.setAutoDrawPaused(roomCode, socket.id, false);
+    if (error) {
+      socket.emit('errorMessage', error);
+      return;
+    }
+    startAutoDraw(roomCode);
+    broadcastRoom(room);
   });
 
   socket.on('drawBall', ({ roomCode }) => {
